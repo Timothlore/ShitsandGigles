@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Low Head Tide & Weather</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b132b;
+        --card: #1c2541;
+        --card-alt: #3a506b;
+        --text: #f5f7ff;
+        --muted: #b8c2df;
+        --accent: #5bc0be;
+        --ok: #7fe08a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: linear-gradient(150deg, var(--bg), #09101f 60%);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      main {
+        width: min(880px, 100%);
+        border-radius: 20px;
+        background: rgb(28 37 65 / 85%);
+        border: 1px solid rgb(255 255 255 / 12%);
+        box-shadow: 0 20px 60px rgb(0 0 0 / 40%);
+        padding: 24px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.35rem, 4vw, 2rem);
+      }
+
+      .subtitle {
+        margin: 8px 0 20px;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        background: linear-gradient(160deg, rgb(58 80 107 / 65%), rgb(28 37 65 / 90%));
+        border: 1px solid rgb(255 255 255 / 10%);
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      .label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .value {
+        margin: 6px 0 0;
+        font-size: clamp(1.25rem, 3vw, 1.9rem);
+        font-weight: 700;
+      }
+
+      .small {
+        font-size: 0.95rem;
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      .status {
+        margin-top: 18px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgb(91 192 190 / 15%);
+        color: var(--accent);
+      }
+
+      .error {
+        background: rgb(255 99 99 / 12%);
+        color: #ff8c8c;
+      }
+
+      .swim {
+        margin-top: 14px;
+        padding: 12px;
+        border-radius: 10px;
+        background: rgb(127 224 138 / 12%);
+        color: var(--ok);
+        border: 1px solid rgb(127 224 138 / 30%);
+      }
+
+      .swim.bad {
+        background: rgb(255 181 99 / 10%);
+        border-color: rgb(255 181 99 / 20%);
+        color: #ffd08d;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Low Head, Tasmania</h1>
+      <p class="subtitle">Latest weather + tide level from public APIs (updates every 5 minutes)</p>
+
+      <section class="grid" id="dashboard" aria-live="polite">
+        <article class="card">
+          <p class="label">Current temperature</p>
+          <p class="value" id="temp">--</p>
+          <p class="small" id="weather-time">Updated --</p>
+        </article>
+
+        <article class="card">
+          <p class="label">Wind speed</p>
+          <p class="value" id="wind">--</p>
+          <p class="small" id="conditions">Conditions --</p>
+        </article>
+
+        <article class="card">
+          <p class="label">Latest tide (sea level)</p>
+          <p class="value" id="tide">--</p>
+          <p class="small" id="tide-time">Updated --</p>
+        </article>
+
+        <article class="card">
+          <p class="label">Next high tide</p>
+          <p class="value" id="next-high">--</p>
+          <p class="small" id="next-high-height">Height --</p>
+        </article>
+      </section>
+
+      <p class="swim bad" id="swim-status">Swim check pending…</p>
+      <p class="status" id="status">Loading latest data…</p>
+    </main>
+
+    <script>
+      const LOW_HEAD = { latitude: -41.0627, longitude: 146.7899 };
+      const REFRESH_MS = 5 * 60 * 1000;
+
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LOW_HEAD.latitude}&longitude=${LOW_HEAD.longitude}&current=temperature_2m,wind_speed_10m,weather_code&daily=sunrise,sunset&timezone=Australia%2FHobart`;
+      const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${LOW_HEAD.latitude}&longitude=${LOW_HEAD.longitude}&hourly=sea_level_height_msl&timezone=Australia%2FHobart&forecast_days=3`;
+
+      const weatherCodeMap = {
+        0: 'Clear sky',
+        1: 'Mainly clear',
+        2: 'Partly cloudy',
+        3: 'Overcast',
+        45: 'Fog',
+        48: 'Depositing rime fog',
+        51: 'Light drizzle',
+        53: 'Moderate drizzle',
+        55: 'Dense drizzle',
+        61: 'Slight rain',
+        63: 'Moderate rain',
+        65: 'Heavy rain',
+        80: 'Rain showers',
+        95: 'Thunderstorm'
+      };
+
+      const el = (id) => document.getElementById(id);
+
+      function formatDateTime(value) {
+        return new Date(value).toLocaleString('en-AU', {
+          weekday: 'short',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      function findLatestTide(hourly) {
+        const now = new Date();
+        let latestIndex = 0;
+
+        for (let i = 0; i < hourly.time.length; i += 1) {
+          const pointTime = new Date(hourly.time[i]);
+          if (pointTime <= now) {
+            latestIndex = i;
+          } else {
+            break;
+          }
+        }
+
+        return {
+          time: hourly.time[latestIndex],
+          value: hourly.sea_level_height_msl[latestIndex],
+          index: latestIndex
+        };
+      }
+
+      function findNextHighTide(hourly) {
+        const now = new Date();
+
+        for (let i = 1; i < hourly.time.length - 1; i += 1) {
+          const currentTime = new Date(hourly.time[i]);
+          if (currentTime <= now) continue;
+
+          const prev = hourly.sea_level_height_msl[i - 1];
+          const current = hourly.sea_level_height_msl[i];
+          const next = hourly.sea_level_height_msl[i + 1];
+
+          if (current >= prev && current >= next) {
+            return { time: hourly.time[i], value: current, index: i };
+          }
+        }
+
+        return null;
+      }
+
+      function isDaylight(now, sunriseIso, sunsetIso) {
+        const sunrise = new Date(sunriseIso);
+        const sunset = new Date(sunsetIso);
+        return now >= sunrise && now <= sunset;
+      }
+
+      function updateSwimStatus({ current, latestTide, nextHigh, sunrise, sunset }) {
+        const now = new Date();
+        const daylight = isDaylight(now, sunrise, sunset);
+        const warmEnough = current.temperature_2m >= 20;
+        const lowWind = current.wind_speed_10m <= 15;
+        const highTideNow =
+          nextHigh && Math.abs(new Date(nextHigh.time).getTime() - now.getTime()) <= 60 * 60 * 1000;
+
+        const isSwimTime = Boolean(daylight && warmEnough && lowWind && highTideNow);
+
+        const swim = el('swim-status');
+        if (isSwimTime) {
+          swim.textContent = '🏊 Swim time: high tide is around now, wind is low, it is warm, and daylight is available.';
+          swim.classList.remove('bad');
+        } else {
+          swim.textContent = 'Not swim time yet: waiting for daylight + warm temperature (≥20°C) + low wind (≤15 km/h) + high tide near current time.';
+          swim.classList.add('bad');
+        }
+      }
+
+      async function loadData() {
+        const status = el('status');
+
+        try {
+          const [weatherRes, marineRes] = await Promise.all([fetch(weatherUrl), fetch(marineUrl)]);
+
+          if (!weatherRes.ok || !marineRes.ok) {
+            throw new Error('API returned an error response');
+          }
+
+          const weather = await weatherRes.json();
+          const marine = await marineRes.json();
+
+          const current = weather.current;
+          const tide = findLatestTide(marine.hourly);
+          const nextHigh = findNextHighTide(marine.hourly);
+
+          el('temp').textContent = `${current.temperature_2m.toFixed(1)}°C`;
+          el('weather-time').textContent = `Updated ${formatDateTime(current.time)}`;
+
+          el('wind').textContent = `${current.wind_speed_10m.toFixed(1)} km/h`;
+          el('conditions').textContent = weatherCodeMap[current.weather_code] ?? 'Unknown';
+
+          el('tide').textContent = `${tide.value.toFixed(2)} m`;
+          el('tide-time').textContent = `Updated ${formatDateTime(tide.time)}`;
+
+          if (nextHigh) {
+            el('next-high').textContent = formatDateTime(nextHigh.time);
+            el('next-high-height').textContent = `Height ${nextHigh.value.toFixed(2)} m`;
+          } else {
+            el('next-high').textContent = 'Not found';
+            el('next-high-height').textContent = 'No local peak in returned data';
+          }
+
+          updateSwimStatus({
+            current,
+            latestTide: tide,
+            nextHigh,
+            sunrise: weather.daily.sunrise[0],
+            sunset: weather.daily.sunset[0]
+          });
+
+          status.textContent = `Live data loaded successfully. Auto-refresh every ${REFRESH_MS / 60000} minutes.`;
+          status.classList.remove('error');
+        } catch (error) {
+          status.textContent = 'Could not load live API data right now. Please refresh shortly.';
+          status.classList.add('error');
+          console.error(error);
+        }
+      }
+
+      loadData();
+      setInterval(loadData, REFRESH_MS);
+    </script>
+  </body>
+</html>
