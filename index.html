@@ -123,8 +123,8 @@
           name: 'Lagoon Beach',
           latitude: -41.0588,
           longitude: 146.794,
-          notes: ['Protected from westerlies', 'Swim best around mid-high tide', 'Usually weak surf setup'],
-          swim: { preferredTideMin: 2.5, preferredTideMax: 3.6, waveMax: 0.8, idealWindKmh: 16, warmWaterC: 17 },
+          notes: ['Protected from westerlies', 'Swim best very close to high tide (±0.4m)', 'Usually weak surf setup'],
+          swim: { preferredTideMin: 2.5, preferredTideMax: 3.6, waveMax: 0.8, idealWindKmh: 16, warmWaterC: 17, highTideToleranceM: 0.4 },
           surf: { minWave: 0.9, idealPeriod: 8, preferredWind: [200, 290], tideMin: 1.8, tideMax: 3.8, penalty: 14 }
         },
         {
@@ -132,8 +132,8 @@
           name: 'Pilots Bay Beach',
           latitude: -41.0616,
           longitude: 146.7867,
-          notes: ['Mixed exposure depending on wind', 'Generally beginner-friendly in moderate swell'],
-          swim: { preferredTideMin: 2.1, preferredTideMax: 3.4, waveMax: 1.0, idealWindKmh: 18, warmWaterC: 16.5 },
+          notes: ['Mixed exposure depending on wind', 'Swim best very close to high tide (±0.4m)', 'Generally beginner-friendly in moderate swell'],
+          swim: { preferredTideMin: 2.1, preferredTideMax: 3.4, waveMax: 1.0, idealWindKmh: 18, warmWaterC: 16.5, highTideToleranceM: 0.4 },
           surf: { minWave: 1.0, idealPeriod: 9, preferredWind: [170, 260], tideMin: 1.6, tideMax: 3.4, penalty: 4 }
         },
         {
@@ -169,7 +169,15 @@
         score += point.waveHeightM <= r.waveMax ? 18 : -20;
         score += point.waterTempC >= r.warmWaterC ? 12 : -10;
         score += point.airTempC >= 18 ? 10 : -8;
-        score += point.tideHeightM >= r.preferredTideMin && point.tideHeightM <= r.preferredTideMax ? 12 : -12;
+
+        const inPreferredTideRange = point.tideHeightM >= r.preferredTideMin && point.tideHeightM <= r.preferredTideMax;
+        const closeToHighTide = r.highTideToleranceM == null
+          ? true
+          : point.dailyHighTideM != null && Math.abs(point.dailyHighTideM - point.tideHeightM) <= r.highTideToleranceM;
+
+        score += inPreferredTideRange ? 6 : -12;
+        score += closeToHighTide ? 16 : (r.highTideToleranceM == null ? 0 : -22);
+
         if (point.turbidityNTU != null) score += point.turbidityNTU <= 6 ? 4 : -6;
         return clamp(score);
       }
@@ -235,6 +243,7 @@
             airTempC: weather.hourly.temperature_2m[i],
             windSpeedKmh: weather.hourly.wind_speed_10m[i],
             windDirectionDeg: weather.hourly.wind_direction_10m[i],
+            dayKey,
             isDaylight,
             isDawnToDusk
           });
@@ -251,7 +260,19 @@
           });
         });
 
-        return [...byTime.values()].filter((p) => p.tideHeightM != null && p.waveHeightM != null);
+        const points = [...byTime.values()].filter((p) => p.tideHeightM != null && p.waveHeightM != null);
+        const dailyHighTideMap = new Map();
+        points.forEach((point) => {
+          const currentHigh = dailyHighTideMap.get(point.dayKey);
+          if (currentHigh == null || point.tideHeightM > currentHigh) {
+            dailyHighTideMap.set(point.dayKey, point.tideHeightM);
+          }
+        });
+
+        return points.map((point) => ({
+          ...point,
+          dailyHighTideM: dailyHighTideMap.get(point.dayKey) ?? null
+        }));
       }
 
       async function fetchBeach(beach) {
@@ -290,6 +311,7 @@
               <p class="score">Swim <strong>${current.swimScore}</strong> <span class="chip ${chipClass(current.swimScore)}">${label(current.swimScore)}</span></p>
               <p class="score">Surf <strong>${current.surfScore}</strong> <span class="chip ${chipClass(current.surfScore)}">${label(current.surfScore)}</span></p>
               <p class="meta">Swim windows limited to daylight · Surf windows limited to dawn-to-dusk</p>
+              <p class="meta">Lagoon + Pilots swim best only when tide is within about ±0.4m of the day’s high tide.</p>
               <p class="meta">Best swim today: ${r.windows.swim.topToday ? `${fmtHour(r.windows.swim.topToday.time)} (${r.windows.swim.topToday.swimScore}/100)` : 'No eligible daylight window'}</p>
               <p class="meta">Best surf today: ${r.windows.surf.topToday ? `${fmtHour(r.windows.surf.topToday.time)} (${r.windows.surf.topToday.surfScore}/100)` : 'No eligible dawn-dusk window'}</p>
               <p class="meta">Best in next 7 days: swim ${r.windows.swim.nextBest ? `${fmtDayHour(r.windows.swim.nextBest.time)} (${r.windows.swim.nextBest.swimScore}/100)` : 'No data'} · surf ${r.windows.surf.nextBest ? `${fmtDayHour(r.windows.surf.nextBest.time)} (${r.windows.surf.nextBest.surfScore}/100)` : 'No data'}</p>
@@ -316,7 +338,7 @@
           .map((p) => `
             <li>
               <strong>${fmtHour(p.time)}</strong> · Swim ${p.swimScore}/100 · Surf ${p.surfScore}/100
-              <span class="small"> · Tide ${p.tideHeightM.toFixed(2)}m · Wind ${p.windSpeedKmh.toFixed(0)} km/h (${p.windDirectionDeg.toFixed(0)}°) · Swell ${p.waveHeightM.toFixed(1)}m @ ${p.swellPeriodS.toFixed(0)}s · ${p.isDaylight ? 'Daylight' : 'Night'} · ${p.isDawnToDusk ? 'Dawn-Dusk' : 'Outside surf window'}</span>
+              <span class="small"> · Tide ${p.tideHeightM.toFixed(2)}m · Daily high ${p.dailyHighTideM != null ? `${p.dailyHighTideM.toFixed(2)}m` : 'n/a'} · Wind ${p.windSpeedKmh.toFixed(0)} km/h (${p.windDirectionDeg.toFixed(0)}°) · Swell ${p.waveHeightM.toFixed(1)}m @ ${p.swellPeriodS.toFixed(0)}s · ${p.isDaylight ? 'Daylight' : 'Night'} · ${p.isDawnToDusk ? 'Dawn-Dusk' : 'Outside surf window'}</span>
             </li>`)
           .join('');
         el('hourly-list').innerHTML = rows;
