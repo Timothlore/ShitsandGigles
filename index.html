@@ -92,6 +92,8 @@
       const REFRESH_MS = 15 * 60 * 1000;
       const TZ = 'Australia/Hobart';
       const FORECAST_DAYS = 7;
+      const SURF_DAWN_OFFSET_MIN = 45;
+
       const BEACHES = [
         {
           id: 'lagoon',
@@ -125,7 +127,7 @@
       const el = (id) => document.getElementById(id);
       const fmtHour = (iso) => new Date(iso).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
       const fmtDayHour = (iso) => new Date(iso).toLocaleString('en-AU', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
-      const todayStr = () => new Date().toISOString().slice(0, 10);
+      const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ });
       const clamp = (n) => Math.max(0, Math.min(100, Math.round(n)));
       const label = (score) => (score >= 80 ? 'Excellent' : score >= 65 ? 'Good' : score >= 45 ? 'Fair' : 'Poor');
       const chipClass = (score) => (score >= 80 ? 'excellent' : score >= 65 ? 'good' : score >= 45 ? 'fair' : 'poor');
@@ -136,6 +138,8 @@
       }
 
       function computeSwimScore(point, beach) {
+        if (!point.isDaylight) return 0;
+
         const r = beach.swim;
         let score = 50;
         score += point.windSpeedKmh <= r.idealWindKmh ? 16 : -18;
@@ -148,6 +152,8 @@
       }
 
       function computeSurfScore(point, beach) {
+        if (!point.isDawnToDusk) return 0;
+
         const r = beach.surf;
         let score = 48;
         score += point.waveHeightM >= r.minWave ? 18 : -18;
@@ -159,7 +165,7 @@
       }
 
       function topScoreForDate(points, key, dateString) {
-        const sameDay = points.filter((p) => p.time.startsWith(dateString));
+        const sameDay = points.filter((p) => p.time.startsWith(dateString) && p[key] > 0);
         if (!sameDay.length) return null;
         return [...sameDay].sort((a, b) => b[key] - a[key])[0];
       }
@@ -168,8 +174,8 @@
         const today = todayStr();
         const topToday = topScoreForDate(points, key, today);
         const nextBest = [...points]
-          .filter((p) => new Date(p.time) >= new Date())
-          .sort((a, b) => b[key] - a[key])[0];
+          .filter((p) => new Date(p.time) >= new Date() && p[key] > 0)
+          .sort((a, b) => b[key] - a[key])[0] ?? null;
 
         const daySet = [...new Set(points.map((p) => p.time.slice(0, 10)))].slice(0, FORECAST_DAYS);
         const daily = daySet
@@ -179,16 +185,38 @@
         return { topToday, nextBest, daily };
       }
 
+      function makeSunWindowMap(daily) {
+        const map = new Map();
+        daily.time.forEach((day, i) => {
+          const sunrise = new Date(daily.sunrise[i]);
+          const sunset = new Date(daily.sunset[i]);
+          const dawn = new Date(sunrise.getTime() - SURF_DAWN_OFFSET_MIN * 60 * 1000);
+          map.set(day, { sunrise, sunset, dawn });
+        });
+        return map;
+      }
+
       function mergeHourly(weather, marine) {
+        const sunMap = makeSunWindowMap(weather.daily);
         const byTime = new Map();
+
         weather.hourly.time.forEach((time, i) => {
+          const pointTime = new Date(time);
+          const dayKey = time.slice(0, 10);
+          const dayWindow = sunMap.get(dayKey);
+          const isDaylight = dayWindow ? pointTime >= dayWindow.sunrise && pointTime <= dayWindow.sunset : false;
+          const isDawnToDusk = dayWindow ? pointTime >= dayWindow.dawn && pointTime <= dayWindow.sunset : false;
+
           byTime.set(time, {
             time,
             airTempC: weather.hourly.temperature_2m[i],
             windSpeedKmh: weather.hourly.wind_speed_10m[i],
-            windDirectionDeg: weather.hourly.wind_direction_10m[i]
+            windDirectionDeg: weather.hourly.wind_direction_10m[i],
+            isDaylight,
+            isDawnToDusk
           });
         });
+
         marine.hourly.time.forEach((time, i) => {
           if (!byTime.has(time)) return;
           Object.assign(byTime.get(time), {
@@ -199,12 +227,13 @@
             turbidityNTU: null
           });
         });
+
         return [...byTime.values()].filter((p) => p.tideHeightM != null && p.waveHeightM != null);
       }
 
       async function fetchBeach(beach) {
         const base = `latitude=${beach.latitude}&longitude=${beach.longitude}&timezone=${encodeURIComponent(TZ)}&forecast_days=${FORECAST_DAYS}`;
-        const weatherUrl = `https://api.open-meteo.com/v1/forecast?${base}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m`;
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?${base}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m&daily=sunrise,sunset`;
         const marineUrl = `https://marine-api.open-meteo.com/v1/marine?${base}&hourly=sea_level_height_msl,wave_height,swell_wave_period,sea_surface_temperature`;
         const [weatherRes, marineRes] = await Promise.all([fetch(weatherUrl), fetch(marineUrl)]);
         if (!weatherRes.ok || !marineRes.ok) throw new Error('Forecast API error');
@@ -237,8 +266,9 @@
               <p class="meta">Now: ${current.airTempC.toFixed(1)}°C air · ${current.waterTempC.toFixed(1)}°C water · ${current.windSpeedKmh.toFixed(0)} km/h wind · ${current.waveHeightM.toFixed(1)} m wave</p>
               <p class="score">Swim <strong>${current.swimScore}</strong> <span class="chip ${chipClass(current.swimScore)}">${label(current.swimScore)}</span></p>
               <p class="score">Surf <strong>${current.surfScore}</strong> <span class="chip ${chipClass(current.surfScore)}">${label(current.surfScore)}</span></p>
-              <p class="meta">Best swim today: ${r.windows.swim.topToday ? `${fmtHour(r.windows.swim.topToday.time)} (${r.windows.swim.topToday.swimScore}/100)` : 'No data'}</p>
-              <p class="meta">Best surf today: ${r.windows.surf.topToday ? `${fmtHour(r.windows.surf.topToday.time)} (${r.windows.surf.topToday.surfScore}/100)` : 'No data'}</p>
+              <p class="meta">Swim windows limited to daylight · Surf windows limited to dawn-to-dusk</p>
+              <p class="meta">Best swim today: ${r.windows.swim.topToday ? `${fmtHour(r.windows.swim.topToday.time)} (${r.windows.swim.topToday.swimScore}/100)` : 'No eligible daylight window'}</p>
+              <p class="meta">Best surf today: ${r.windows.surf.topToday ? `${fmtHour(r.windows.surf.topToday.time)} (${r.windows.surf.topToday.surfScore}/100)` : 'No eligible dawn-dusk window'}</p>
               <p class="meta">Best in next 7 days: swim ${r.windows.swim.nextBest ? `${fmtDayHour(r.windows.swim.nextBest.time)} (${r.windows.swim.nextBest.swimScore}/100)` : 'No data'} · surf ${r.windows.surf.nextBest ? `${fmtDayHour(r.windows.surf.nextBest.time)} (${r.windows.surf.nextBest.surfScore}/100)` : 'No data'}</p>
               <button data-beach="${r.beach.id}">View hourly detail</button>
             </article>
@@ -256,14 +286,14 @@
 
       function renderDetail(result) {
         el('detail-title').textContent = `${result.beach.name} — hourly today`;
-        el('detail-notes').textContent = result.beach.notes.join(' · ');
+        el('detail-notes').textContent = `${result.beach.notes.join(' · ')} · Swim: daylight only · Surf: dawn to dusk`;
         const today = todayStr();
         const rows = result.points
           .filter((p) => p.time.startsWith(today))
           .map((p) => `
             <li>
               <strong>${fmtHour(p.time)}</strong> · Swim ${p.swimScore}/100 · Surf ${p.surfScore}/100
-              <span class="small"> · Tide ${p.tideHeightM.toFixed(2)}m · Wind ${p.windSpeedKmh.toFixed(0)} km/h (${p.windDirectionDeg.toFixed(0)}°) · Swell ${p.waveHeightM.toFixed(1)}m @ ${p.swellPeriodS.toFixed(0)}s</span>
+              <span class="small"> · Tide ${p.tideHeightM.toFixed(2)}m · Wind ${p.windSpeedKmh.toFixed(0)} km/h (${p.windDirectionDeg.toFixed(0)}°) · Swell ${p.waveHeightM.toFixed(1)}m @ ${p.swellPeriodS.toFixed(0)}s · ${p.isDaylight ? 'Daylight' : 'Night'} · ${p.isDawnToDusk ? 'Dawn-Dusk' : 'Outside surf window'}</span>
             </li>`)
           .join('');
         el('hourly-list').innerHTML = rows;
@@ -284,8 +314,8 @@
           return `
             <li>
               <strong>${r.beach.name}</strong><br/>
-              Best swim today: ${r.windows.swim.topToday ? `${fmtHour(r.windows.swim.topToday.time)} (${r.windows.swim.topToday.swimScore}/100)` : 'No data'} ·
-              Best surf today: ${r.windows.surf.topToday ? `${fmtHour(r.windows.surf.topToday.time)} (${r.windows.surf.topToday.surfScore}/100)` : 'No data'}<br/>
+              Best swim today: ${r.windows.swim.topToday ? `${fmtHour(r.windows.swim.topToday.time)} (${r.windows.swim.topToday.swimScore}/100)` : 'No eligible daylight window'} ·
+              Best surf today: ${r.windows.surf.topToday ? `${fmtHour(r.windows.surf.topToday.time)} (${r.windows.surf.topToday.surfScore}/100)` : 'No eligible dawn-dusk window'}<br/>
               <span class="small">7-day swim windows: ${swimWeek || 'No data'}</span><br/>
               <span class="small">7-day surf windows: ${surfWeek || 'No data'}</span>
             </li>`;
@@ -301,7 +331,7 @@
           renderCards(results);
           renderBestTime(results);
           renderDetail(results[0]);
-          status.textContent = `Updated ${new Date().toLocaleTimeString('en-AU')} · Forecast horizon ${FORECAST_DAYS} days · Auto-refresh every ${REFRESH_MS / 60000} minutes.`;
+          status.textContent = `Updated ${new Date().toLocaleTimeString('en-AU')} · Forecast horizon ${FORECAST_DAYS} days · Swim daylight-only · Surf dawn-to-dusk · Auto-refresh every ${REFRESH_MS / 60000} minutes.`;
         } catch (err) {
           status.textContent = 'Could not load one or more forecasts. Please retry shortly.';
           console.error(err);
