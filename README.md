@@ -1,6 +1,13 @@
 # Three Beaches Dashboard
 
-This project is currently a **single-file web page prototype** for Lagoon Beach, Pilots Bay Beach, and East Beach.
+This project is currently a **single-file accessible web dashboard prototype** for Lagoon Beach, Pilots Bay Beach, and East Beach.
+
+## What it does
+
+- fetches hourly weather + marine conditions,
+- scores each beach for **swimming** and **surfing**,
+- shows the best windows for today and the next 7 days,
+- and lets the user adjust the scoring criteria in the UI.
 
 ## Where to get the latest version
 
@@ -31,6 +38,16 @@ Then open:
 ```text
 http://127.0.0.1:4173
 ```
+
+## Adjustable criteria in the UI
+
+The settings panel lets a user change:
+
+- what score counts as a “good” swim,
+- what score counts as a “good” surf,
+- swim wind / wave / water-temperature / tide settings,
+- optional near-high-tide tolerance,
+- and surf wave / period / tide settings.
 
 ## Suggested next step for public downloads
 
