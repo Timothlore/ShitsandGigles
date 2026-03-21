@@ -3,300 +3,842 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Low Head Tide & Weather</title>
+    <title>Three Beaches — Swim & Surf Windows</title>
     <style>
       :root {
-        color-scheme: light dark;
-        --bg: #0b132b;
-        --card: #1c2541;
-        --card-alt: #3a506b;
-        --text: #f5f7ff;
-        --muted: #b8c2df;
-        --accent: #5bc0be;
-        --ok: #7fe08a;
+        --bg: #061225;
+        --panel: #0d1f3a;
+        --card: #13294b;
+        --line: #32507d;
+        --text: #eff6ff;
+        --muted: #c5d4ea;
+        --accent: #80e1f5;
+        --good: #7af0aa;
+        --fair: #ffd887;
+        --poor: #ff9c9c;
+        --focus: #fff2a8;
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
+
+      html { color-scheme: dark; }
 
       body {
         margin: 0;
-        min-height: 100vh;
         font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: linear-gradient(150deg, var(--bg), #09101f 60%);
         color: var(--text);
-        display: grid;
-        place-items: center;
-        padding: 24px;
+        background: radial-gradient(circle at top right, #1c457e 0, #081426 44%, #040b17 100%);
+        min-height: 100vh;
+        padding: 20px;
+        line-height: 1.45;
       }
 
-      main {
-        width: min(880px, 100%);
-        border-radius: 20px;
-        background: rgb(28 37 65 / 85%);
-        border: 1px solid rgb(255 255 255 / 12%);
-        box-shadow: 0 20px 60px rgb(0 0 0 / 40%);
-        padding: 24px;
-      }
+      main { max-width: 1200px; margin: 0 auto; }
+      h1, h2, h3 { line-height: 1.2; }
+      h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 3vw, 2.2rem); }
+      h2 { margin: 0 0 10px; font-size: 1.05rem; }
+      h3 { margin: 0 0 6px; font-size: .95rem; }
+      p { margin: 0; }
 
-      h1 {
-        margin: 0;
-        font-size: clamp(1.35rem, 4vw, 2rem);
-      }
-
-      .subtitle {
-        margin: 8px 0 20px;
+      .subtitle,
+      .small,
+      .meta,
+      .helper,
+      .criteria-copy p,
+      .download-note p {
         color: var(--muted);
       }
 
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 16px;
-      }
-
-      .card {
-        background: linear-gradient(160deg, rgb(58 80 107 / 65%), rgb(28 37 65 / 90%));
-        border: 1px solid rgb(255 255 255 / 10%);
-        border-radius: 16px;
-        padding: 16px;
-      }
-
-      .label {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.85rem;
-      }
-
-      .value {
-        margin: 6px 0 0;
-        font-size: clamp(1.25rem, 3vw, 1.9rem);
-        font-weight: 700;
-      }
-
-      .small {
-        font-size: 0.95rem;
-        margin-top: 10px;
-        color: var(--muted);
-      }
+      .subtitle { margin: 0 0 8px; }
+      .type-note { margin: 0 0 18px; color: var(--accent); font-size: .95rem; }
 
       .status {
-        margin-top: 18px;
-        padding: 10px 12px;
-        border-radius: 10px;
-        background: rgb(91 192 190 / 15%);
+        margin-bottom: 16px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgb(13 31 58 / 78%);
         color: var(--accent);
       }
 
-      .error {
-        background: rgb(255 99 99 / 12%);
-        color: #ff8c8c;
+      .cards,
+      .panels {
+        display: grid;
+        gap: 16px;
       }
 
-      .swim {
-        margin-top: 14px;
-        padding: 12px;
+      .cards { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+      .panels { margin-top: 18px; grid-template-columns: 1.05fr 1fr 1fr; align-items: start; }
+
+      .card,
+      .panel,
+      .download-note {
+        background: linear-gradient(165deg, rgb(19 41 75 / 94%), rgb(10 25 47 / 96%));
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 10px 24px rgb(0 0 0 / 18%);
+      }
+
+      .card h2 { margin-bottom: 12px; }
+      .meta { margin-top: 8px; font-size: .93rem; }
+      .small { font-size: .9rem; }
+      .helper { font-size: .85rem; margin-top: 6px; }
+
+      .score-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        margin-top: 10px;
+      }
+
+      .score {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+
+      .score strong { font-size: 1.28rem; }
+
+      .chip {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: .8rem;
+        font-weight: 700;
+        letter-spacing: .01em;
+      }
+
+      .chip.excellent { background: rgb(122 240 170 / 18%); color: var(--good); }
+      .chip.good { background: rgb(128 225 245 / 18%); color: var(--accent); }
+      .chip.fair { background: rgb(255 216 135 / 18%); color: var(--fair); }
+      .chip.poor { background: rgb(255 156 156 / 18%); color: var(--poor); }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: #0b1b33;
+        color: var(--text);
         border-radius: 10px;
-        background: rgb(127 224 138 / 12%);
-        color: var(--ok);
-        border: 1px solid rgb(127 224 138 / 30%);
+        padding: 10px 12px;
+        cursor: pointer;
+        font: inherit;
       }
 
-      .swim.bad {
-        background: rgb(255 181 99 / 10%);
-        border-color: rgb(255 181 99 / 20%);
-        color: #ffd08d;
+      button.primary {
+        background: linear-gradient(180deg, #1a3d72, #112b4e);
+      }
+
+      button:hover,
+      select:hover,
+      input:hover { border-color: var(--accent); }
+
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .list {
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+        max-height: 380px;
+        overflow: auto;
+      }
+
+      .list li {
+        border-bottom: 1px solid rgb(197 212 234 / 14%);
+        padding: 10px 2px;
+        font-size: .92rem;
+      }
+
+      .criteria-copy {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .criteria-copy strong { color: var(--text); }
+
+      form.criteria-form {
+        display: grid;
+        gap: 14px;
+      }
+
+      fieldset {
+        margin: 0;
+        padding: 12px;
+        border: 1px solid rgb(197 212 234 / 18%);
+        border-radius: 12px;
+      }
+
+      legend {
+        padding: 0 6px;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: .9rem;
+      }
+
+      input,
+      select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #071324;
+        color: var(--text);
+        padding: 10px 12px;
+        font: inherit;
+      }
+
+      .download-note {
+        margin-top: 18px;
+      }
+
+      .download-note code {
+        background: rgb(6 18 37 / 85%);
+        border: 1px solid rgb(197 212 234 / 16%);
+        border-radius: 6px;
+        padding: 2px 6px;
+        color: var(--text);
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (max-width: 1020px) {
+        .panels { grid-template-columns: 1fr; }
+      }
+
+      @media (max-width: 640px) {
+        .form-grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>Low Head, Tasmania</h1>
-      <p class="subtitle">Latest weather + tide level from public APIs (updates every 5 minutes)</p>
+      <h1>Lagoon Beach · Pilots Bay Beach · East Beach</h1>
+      <p class="subtitle">Hyper-local swim and surf windows from hourly tide, wind, temperature and swell data.</p>
+      <p class="type-note">Accessible web dashboard prototype with adjustable scoring criteria and 7-day forecast windows.</p>
 
-      <section class="grid" id="dashboard" aria-live="polite">
-        <article class="card">
-          <p class="label">Current temperature</p>
-          <p class="value" id="temp">--</p>
-          <p class="small" id="weather-time">Updated --</p>
+      <p class="status" id="status" aria-live="polite">Loading local conditions…</p>
+
+      <section aria-labelledby="beaches-heading">
+        <h2 id="beaches-heading" class="visually-hidden">Beach cards</h2>
+        <div class="cards" id="beach-cards"></div>
+      </section>
+
+      <section class="panels" aria-label="Dashboard panels">
+        <article class="panel" aria-labelledby="criteria-heading">
+          <h2 id="criteria-heading">Criteria &amp; settings</h2>
+          <div class="criteria-copy" id="criteria-copy"></div>
+
+          <form class="criteria-form" id="criteria-form">
+            <fieldset>
+              <legend>What counts as “good”</legend>
+              <div class="form-grid">
+                <label for="selected-beach">
+                  Beach to adjust
+                  <select id="selected-beach" name="selectedBeach"></select>
+                </label>
+                <label for="good-swim-score">
+                  Good swim score
+                  <input id="good-swim-score" name="goodSwimScore" type="number" min="0" max="100" step="1" />
+                </label>
+                <label for="good-surf-score">
+                  Good surf score
+                  <input id="good-surf-score" name="goodSurfScore" type="number" min="0" max="100" step="1" />
+                </label>
+              </div>
+              <p class="helper">Hours at or above these thresholds are labelled “Good” or better.</p>
+            </fieldset>
+
+            <fieldset>
+              <legend>Swim criteria for selected beach</legend>
+              <div class="form-grid">
+                <label for="swim-wind">
+                  Max wind for swim (km/h)
+                  <input id="swim-wind" name="swimWind" type="number" min="0" max="80" step="1" />
+                </label>
+                <label for="swim-wave">
+                  Max wave height for swim (m)
+                  <input id="swim-wave" name="swimWave" type="number" min="0" max="5" step="0.1" />
+                </label>
+                <label for="swim-water-temp">
+                  Comfortable water temp (°C)
+                  <input id="swim-water-temp" name="swimWaterTemp" type="number" min="0" max="35" step="0.1" />
+                </label>
+                <label for="swim-tide-min">
+                  Swim tide min (m)
+                  <input id="swim-tide-min" name="swimTideMin" type="number" min="0" max="10" step="0.1" />
+                </label>
+                <label for="swim-tide-max">
+                  Swim tide max (m)
+                  <input id="swim-tide-max" name="swimTideMax" type="number" min="0" max="10" step="0.1" />
+                </label>
+                <label for="high-tide-tolerance">
+                  Near-high-tide tolerance (m)
+                  <input id="high-tide-tolerance" name="highTideTolerance" type="number" min="0" max="2" step="0.1" />
+                </label>
+              </div>
+              <p class="helper">Leave the high-tide tolerance at <code>0</code> to disable that extra swim rule for the selected beach.</p>
+            </fieldset>
+
+            <fieldset>
+              <legend>Surf criteria for selected beach</legend>
+              <div class="form-grid">
+                <label for="surf-wave">
+                  Min surf wave height (m)
+                  <input id="surf-wave" name="surfWave" type="number" min="0" max="6" step="0.1" />
+                </label>
+                <label for="surf-period">
+                  Min swell period (s)
+                  <input id="surf-period" name="surfPeriod" type="number" min="1" max="20" step="1" />
+                </label>
+                <label for="surf-tide-min">
+                  Surf tide min (m)
+                  <input id="surf-tide-min" name="surfTideMin" type="number" min="0" max="10" step="0.1" />
+                </label>
+                <label for="surf-tide-max">
+                  Surf tide max (m)
+                  <input id="surf-tide-max" name="surfTideMax" type="number" min="0" max="10" step="0.1" />
+                </label>
+              </div>
+              <p class="helper">Preferred wind direction stays beach-specific and built into the local model.</p>
+            </fieldset>
+
+            <div class="button-row">
+              <button class="primary" type="submit">Apply criteria</button>
+              <button type="button" id="reset-criteria">Reset defaults</button>
+            </div>
+          </form>
         </article>
 
-        <article class="card">
-          <p class="label">Wind speed</p>
-          <p class="value" id="wind">--</p>
-          <p class="small" id="conditions">Conditions --</p>
+        <article class="panel" aria-labelledby="detail-title">
+          <h2 id="detail-title">Beach detail</h2>
+          <p class="small" id="detail-notes">Choose a beach card to inspect the hourly breakdown.</p>
+          <ul class="list" id="hourly-list"></ul>
         </article>
 
-        <article class="card">
-          <p class="label">Latest tide (sea level)</p>
-          <p class="value" id="tide">--</p>
-          <p class="small" id="tide-time">Updated --</p>
-        </article>
-
-        <article class="card">
-          <p class="label">Next high tide</p>
-          <p class="value" id="next-high">--</p>
-          <p class="small" id="next-high-height">Height --</p>
+        <article class="panel" aria-labelledby="best-heading">
+          <h2 id="best-heading">Best time (today + next 7 days)</h2>
+          <p class="small" id="best-now">Calculating best beach right now…</p>
+          <ul class="list" id="best-list"></ul>
         </article>
       </section>
 
-      <p class="swim bad" id="swim-status">Swim check pending…</p>
-      <p class="status" id="status">Loading latest data…</p>
+      <section class="download-note" aria-labelledby="download-heading">
+        <h2 id="download-heading">Where to get the latest version</h2>
+        <p>This prototype does not have a public app-store build or release download yet.</p>
+        <p>Right now, the latest version is the current repo source — specifically <code>index.html</code> — or a ZIP/export of the current branch.</p>
+        <p>If you want a real download link next, publish this as a hosted static site or create a release ZIP.</p>
+      </section>
     </main>
 
     <script>
-      const LOW_HEAD = { latitude: -41.0627, longitude: 146.7899 };
-      const REFRESH_MS = 5 * 60 * 1000;
+      const REFRESH_MS = 15 * 60 * 1000;
+      const TZ = 'Australia/Hobart';
+      const FORECAST_DAYS = 7;
+      const SURF_DAWN_OFFSET_MIN = 45;
+      const STORAGE_KEY = 'three-beaches-settings-v1';
 
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LOW_HEAD.latitude}&longitude=${LOW_HEAD.longitude}&current=temperature_2m,wind_speed_10m,weather_code&daily=sunrise,sunset&timezone=Australia%2FHobart`;
-      const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${LOW_HEAD.latitude}&longitude=${LOW_HEAD.longitude}&hourly=sea_level_height_msl&timezone=Australia%2FHobart&forecast_days=3`;
+      const DEFAULT_BEACHES = [
+        {
+          id: 'lagoon',
+          name: 'Lagoon Beach',
+          latitude: -41.0588,
+          longitude: 146.794,
+          notes: ['Protected from westerlies', 'Swim best very close to high tide (±0.4m)', 'Usually weak surf setup'],
+          swim: { preferredTideMin: 2.5, preferredTideMax: 3.6, waveMax: 0.8, idealWindKmh: 16, warmWaterC: 17, highTideToleranceM: 0.4 },
+          surf: { minWave: 0.9, idealPeriod: 8, preferredWind: [200, 290], tideMin: 1.8, tideMax: 3.8, penalty: 14 }
+        },
+        {
+          id: 'pilots',
+          name: 'Pilots Bay Beach',
+          latitude: -41.0616,
+          longitude: 146.7867,
+          notes: ['Mixed exposure depending on wind', 'Swim best very close to high tide (±0.4m)', 'Generally beginner-friendly in moderate swell'],
+          swim: { preferredTideMin: 2.1, preferredTideMax: 3.4, waveMax: 1.0, idealWindKmh: 18, warmWaterC: 16.5, highTideToleranceM: 0.4 },
+          surf: { minWave: 1.0, idealPeriod: 9, preferredWind: [170, 260], tideMin: 1.6, tideMax: 3.4, penalty: 4 }
+        },
+        {
+          id: 'east',
+          name: 'East Beach',
+          latitude: -41.0527,
+          longitude: 146.8082,
+          notes: ['Best swell exposure of the three', 'Can be messy in strong onshore winds'],
+          swim: { preferredTideMin: 2.4, preferredTideMax: 3.5, waveMax: 0.9, idealWindKmh: 14, warmWaterC: 17.5, highTideToleranceM: 0 },
+          surf: { minWave: 1.2, idealPeriod: 10, preferredWind: [230, 320], tideMin: 1.5, tideMax: 3.2, penalty: 0 }
+        }
+      ];
 
-      const weatherCodeMap = {
-        0: 'Clear sky',
-        1: 'Mainly clear',
-        2: 'Partly cloudy',
-        3: 'Overcast',
-        45: 'Fog',
-        48: 'Depositing rime fog',
-        51: 'Light drizzle',
-        53: 'Moderate drizzle',
-        55: 'Dense drizzle',
-        61: 'Slight rain',
-        63: 'Moderate rain',
-        65: 'Heavy rain',
-        80: 'Rain showers',
-        95: 'Thunderstorm'
+      const DEFAULT_UI = {
+        selectedBeachId: 'lagoon',
+        goodSwimScore: 65,
+        goodSurfScore: 65,
+        selectedDetailBeachId: 'lagoon'
+      };
+
+      const state = {
+        beaches: clone(DEFAULT_BEACHES),
+        ui: { ...DEFAULT_UI },
+        rawResults: [],
+        scoredResults: []
       };
 
       const el = (id) => document.getElementById(id);
+      const fmtHour = (iso) => new Date(iso).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
+      const fmtDayHour = (iso) => new Date(iso).toLocaleString('en-AU', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+      const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ });
+      const clamp = (n) => Math.max(0, Math.min(100, Math.round(n)));
 
-      function formatDateTime(value) {
-        return new Date(value).toLocaleString('en-AU', {
-          weekday: 'short',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+      function clone(value) {
+        return JSON.parse(JSON.stringify(value));
       }
 
-      function findLatestTide(hourly) {
-        const now = new Date();
-        let latestIndex = 0;
+      function scoreThreshold(kind) {
+        return kind === 'swim' ? state.ui.goodSwimScore : state.ui.goodSurfScore;
+      }
 
-        for (let i = 0; i < hourly.time.length; i += 1) {
-          const pointTime = new Date(hourly.time[i]);
-          if (pointTime <= now) {
-            latestIndex = i;
-          } else {
-            break;
-          }
-        }
+      function scoreLabel(score, kind) {
+        const good = scoreThreshold(kind);
+        const excellent = Math.min(100, good + 15);
+        const fair = Math.max(0, good - 20);
+        if (score >= excellent) return 'Excellent';
+        if (score >= good) return 'Good';
+        if (score >= fair) return 'Fair';
+        return 'Poor';
+      }
 
+      function chipClass(score, kind) {
+        const good = scoreThreshold(kind);
+        const excellent = Math.min(100, good + 15);
+        const fair = Math.max(0, good - 20);
+        if (score >= excellent) return 'excellent';
+        if (score >= good) return 'good';
+        if (score >= fair) return 'fair';
+        return 'poor';
+      }
+
+      function inDirectionRange(deg, min, max) {
+        if (min <= max) return deg >= min && deg <= max;
+        return deg >= min || deg <= max;
+      }
+
+      function getBeach(id) {
+        return state.beaches.find((beach) => beach.id === id);
+      }
+
+      function hasHighTideRule(beach) {
+        return Number(beach.swim.highTideToleranceM) > 0;
+      }
+
+      function criteriaSummary(beach) {
         return {
-          time: hourly.time[latestIndex],
-          value: hourly.sea_level_height_msl[latestIndex],
-          index: latestIndex
+          swim: `Good swim = daylight-only, score ≥ ${state.ui.goodSwimScore}, wind ≤ ${beach.swim.idealWindKmh} km/h, waves ≤ ${beach.swim.waveMax.toFixed(1)} m, water ≥ ${beach.swim.warmWaterC.toFixed(1)}°C, tide ${beach.swim.preferredTideMin.toFixed(1)}–${beach.swim.preferredTideMax.toFixed(1)} m${hasHighTideRule(beach) ? `, and within ±${beach.swim.highTideToleranceM.toFixed(1)} m of high tide` : ''}.`,
+          surf: `Good surf = dawn-to-dusk, score ≥ ${state.ui.goodSurfScore}, wave height ≥ ${beach.surf.minWave.toFixed(1)} m, swell period ≥ ${beach.surf.idealPeriod}s, tide ${beach.surf.tideMin.toFixed(1)}–${beach.surf.tideMax.toFixed(1)} m, plus the beach’s preferred wind direction.`
         };
       }
 
-      function findNextHighTide(hourly) {
-        const now = new Date();
-
-        for (let i = 1; i < hourly.time.length - 1; i += 1) {
-          const currentTime = new Date(hourly.time[i]);
-          if (currentTime <= now) continue;
-
-          const prev = hourly.sea_level_height_msl[i - 1];
-          const current = hourly.sea_level_height_msl[i];
-          const next = hourly.sea_level_height_msl[i + 1];
-
-          if (current >= prev && current >= next) {
-            return { time: hourly.time[i], value: current, index: i };
-          }
-        }
-
-        return null;
+      function renderCriteriaCopy() {
+        const beach = getBeach(state.ui.selectedBeachId);
+        const summary = criteriaSummary(beach);
+        el('criteria-copy').innerHTML = `
+          <div>
+            <h3>What counts as a good swim?</h3>
+            <p><strong>${beach.name}:</strong> ${summary.swim}</p>
+          </div>
+          <div>
+            <h3>What counts as a good surf?</h3>
+            <p><strong>${beach.name}:</strong> ${summary.surf}</p>
+          </div>
+        `;
       }
 
-      function isDaylight(now, sunriseIso, sunsetIso) {
-        const sunrise = new Date(sunriseIso);
-        const sunset = new Date(sunsetIso);
-        return now >= sunrise && now <= sunset;
+      function saveSettings() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ beaches: state.beaches, ui: state.ui }));
       }
 
-      function updateSwimStatus({ current, latestTide, nextHigh, sunrise, sunset }) {
-        const now = new Date();
-        const daylight = isDaylight(now, sunrise, sunset);
-        const warmEnough = current.temperature_2m >= 20;
-        const lowWind = current.wind_speed_10m <= 15;
-        const highTideNow =
-          nextHigh && Math.abs(new Date(nextHigh.time).getTime() - now.getTime()) <= 60 * 60 * 1000;
-
-        const isSwimTime = Boolean(daylight && warmEnough && lowWind && highTideNow);
-
-        const swim = el('swim-status');
-        if (isSwimTime) {
-          swim.textContent = '🏊 Swim time: high tide is around now, wind is low, it is warm, and daylight is available.';
-          swim.classList.remove('bad');
-        } else {
-          swim.textContent = 'Not swim time yet: waiting for daylight + warm temperature (≥20°C) + low wind (≤15 km/h) + high tide near current time.';
-          swim.classList.add('bad');
-        }
-      }
-
-      async function loadData() {
-        const status = el('status');
-
+      function loadSettings() {
         try {
-          const [weatherRes, marineRes] = await Promise.all([fetch(weatherUrl), fetch(marineUrl)]);
-
-          if (!weatherRes.ok || !marineRes.ok) {
-            throw new Error('API returned an error response');
-          }
-
-          const weather = await weatherRes.json();
-          const marine = await marineRes.json();
-
-          const current = weather.current;
-          const tide = findLatestTide(marine.hourly);
-          const nextHigh = findNextHighTide(marine.hourly);
-
-          el('temp').textContent = `${current.temperature_2m.toFixed(1)}°C`;
-          el('weather-time').textContent = `Updated ${formatDateTime(current.time)}`;
-
-          el('wind').textContent = `${current.wind_speed_10m.toFixed(1)} km/h`;
-          el('conditions').textContent = weatherCodeMap[current.weather_code] ?? 'Unknown';
-
-          el('tide').textContent = `${tide.value.toFixed(2)} m`;
-          el('tide-time').textContent = `Updated ${formatDateTime(tide.time)}`;
-
-          if (nextHigh) {
-            el('next-high').textContent = formatDateTime(nextHigh.time);
-            el('next-high-height').textContent = `Height ${nextHigh.value.toFixed(2)} m`;
-          } else {
-            el('next-high').textContent = 'Not found';
-            el('next-high-height').textContent = 'No local peak in returned data';
-          }
-
-          updateSwimStatus({
-            current,
-            latestTide: tide,
-            nextHigh,
-            sunrise: weather.daily.sunrise[0],
-            sunset: weather.daily.sunset[0]
-          });
-
-          status.textContent = `Live data loaded successfully. Auto-refresh every ${REFRESH_MS / 60000} minutes.`;
-          status.classList.remove('error');
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (parsed.beaches) state.beaches = parsed.beaches;
+          if (parsed.ui) state.ui = { ...state.ui, ...parsed.ui };
         } catch (error) {
-          status.textContent = 'Could not load live API data right now. Please refresh shortly.';
-          status.classList.add('error');
+          console.warn('Could not restore saved settings', error);
+        }
+      }
+
+      function populateBeachSelect() {
+        el('selected-beach').innerHTML = state.beaches
+          .map((beach) => `<option value="${beach.id}">${beach.name}</option>`)
+          .join('');
+      }
+
+      function populateCriteriaForm() {
+        const beach = getBeach(state.ui.selectedBeachId);
+        el('selected-beach').value = beach.id;
+        el('good-swim-score').value = String(state.ui.goodSwimScore);
+        el('good-surf-score').value = String(state.ui.goodSurfScore);
+        el('swim-wind').value = String(beach.swim.idealWindKmh);
+        el('swim-wave').value = String(beach.swim.waveMax);
+        el('swim-water-temp').value = String(beach.swim.warmWaterC);
+        el('swim-tide-min').value = String(beach.swim.preferredTideMin);
+        el('swim-tide-max').value = String(beach.swim.preferredTideMax);
+        el('high-tide-tolerance').value = String(beach.swim.highTideToleranceM ?? 0);
+        el('surf-wave').value = String(beach.surf.minWave);
+        el('surf-period').value = String(beach.surf.idealPeriod);
+        el('surf-tide-min').value = String(beach.surf.tideMin);
+        el('surf-tide-max').value = String(beach.surf.tideMax);
+        renderCriteriaCopy();
+      }
+
+      function numberValue(id, fallback) {
+        const value = Number(el(id).value);
+        return Number.isFinite(value) ? value : fallback;
+      }
+
+      function applyCriteriaFromForm() {
+        const beach = getBeach(state.ui.selectedBeachId);
+        state.ui.goodSwimScore = clamp(numberValue('good-swim-score', state.ui.goodSwimScore));
+        state.ui.goodSurfScore = clamp(numberValue('good-surf-score', state.ui.goodSurfScore));
+        beach.swim.idealWindKmh = numberValue('swim-wind', beach.swim.idealWindKmh);
+        beach.swim.waveMax = numberValue('swim-wave', beach.swim.waveMax);
+        beach.swim.warmWaterC = numberValue('swim-water-temp', beach.swim.warmWaterC);
+        beach.swim.preferredTideMin = numberValue('swim-tide-min', beach.swim.preferredTideMin);
+        beach.swim.preferredTideMax = numberValue('swim-tide-max', beach.swim.preferredTideMax);
+        beach.swim.highTideToleranceM = numberValue('high-tide-tolerance', beach.swim.highTideToleranceM);
+        beach.surf.minWave = numberValue('surf-wave', beach.surf.minWave);
+        beach.surf.idealPeriod = numberValue('surf-period', beach.surf.idealPeriod);
+        beach.surf.tideMin = numberValue('surf-tide-min', beach.surf.tideMin);
+        beach.surf.tideMax = numberValue('surf-tide-max', beach.surf.tideMax);
+
+        saveSettings();
+        rebuildScoredResults();
+      }
+
+      function resetCriteria() {
+        state.beaches = clone(DEFAULT_BEACHES);
+        state.ui = { ...DEFAULT_UI, selectedBeachId: state.ui.selectedBeachId, selectedDetailBeachId: state.ui.selectedDetailBeachId };
+        saveSettings();
+        populateCriteriaForm();
+        rebuildScoredResults();
+      }
+
+      function computeSwimScore(point, beach) {
+        if (!point.isDaylight) return 0;
+
+        const r = beach.swim;
+        let score = 50;
+        score += point.windSpeedKmh <= r.idealWindKmh ? 16 : -18;
+        score += point.waveHeightM <= r.waveMax ? 18 : -20;
+        score += point.waterTempC >= r.warmWaterC ? 12 : -10;
+        score += point.airTempC >= 18 ? 10 : -8;
+
+        const inPreferredTideRange = point.tideHeightM >= r.preferredTideMin && point.tideHeightM <= r.preferredTideMax;
+        const closeToHighTide = !hasHighTideRule(beach)
+          ? true
+          : point.dailyHighTideM != null && Math.abs(point.dailyHighTideM - point.tideHeightM) <= r.highTideToleranceM;
+
+        score += inPreferredTideRange ? 6 : -12;
+        score += closeToHighTide ? 16 : (hasHighTideRule(beach) ? -22 : 0);
+
+        if (point.turbidityNTU != null) score += point.turbidityNTU <= 6 ? 4 : -6;
+        return clamp(score);
+      }
+
+      function computeSurfScore(point, beach) {
+        if (!point.isDawnToDusk) return 0;
+
+        const r = beach.surf;
+        let score = 48;
+        score += point.waveHeightM >= r.minWave ? 18 : -18;
+        score += point.swellPeriodS >= r.idealPeriod ? 14 : -10;
+        score += inDirectionRange(point.windDirectionDeg, r.preferredWind[0], r.preferredWind[1]) ? 14 : -16;
+        score += point.tideHeightM >= r.tideMin && point.tideHeightM <= r.tideMax ? 10 : -10;
+        score -= r.penalty;
+        return clamp(score);
+      }
+
+      function topScoreForDate(points, key, dateString) {
+        const sameDay = points.filter((point) => point.time.startsWith(dateString) && point[key] > 0);
+        if (!sameDay.length) return null;
+        return [...sameDay].sort((a, b) => b[key] - a[key])[0];
+      }
+
+      function buildWindows(points, key) {
+        const today = todayStr();
+        const topToday = topScoreForDate(points, key, today);
+        const nextBest = [...points]
+          .filter((point) => new Date(point.time) >= new Date() && point[key] > 0)
+          .sort((a, b) => b[key] - a[key])[0] ?? null;
+
+        const daySet = [...new Set(points.map((point) => point.time.slice(0, 10)))].slice(0, FORECAST_DAYS);
+        const daily = daySet
+          .map((date) => ({ date, best: topScoreForDate(points, key, date) }))
+          .filter((item) => item.best != null);
+
+        return { topToday, nextBest, daily };
+      }
+
+      function makeSunWindowMap(daily) {
+        const map = new Map();
+        daily.time.forEach((day, index) => {
+          const sunrise = new Date(daily.sunrise[index]);
+          const sunset = new Date(daily.sunset[index]);
+          const dawn = new Date(sunrise.getTime() - SURF_DAWN_OFFSET_MIN * 60 * 1000);
+          map.set(day, { sunrise, sunset, dawn });
+        });
+        return map;
+      }
+
+      function mergeHourly(weather, marine) {
+        const sunMap = makeSunWindowMap(weather.daily);
+        const byTime = new Map();
+
+        weather.hourly.time.forEach((time, index) => {
+          const pointTime = new Date(time);
+          const dayKey = time.slice(0, 10);
+          const dayWindow = sunMap.get(dayKey);
+          const isDaylight = dayWindow ? pointTime >= dayWindow.sunrise && pointTime <= dayWindow.sunset : false;
+          const isDawnToDusk = dayWindow ? pointTime >= dayWindow.dawn && pointTime <= dayWindow.sunset : false;
+
+          byTime.set(time, {
+            time,
+            dayKey,
+            airTempC: weather.hourly.temperature_2m[index],
+            windSpeedKmh: weather.hourly.wind_speed_10m[index],
+            windDirectionDeg: weather.hourly.wind_direction_10m[index],
+            isDaylight,
+            isDawnToDusk
+          });
+        });
+
+        marine.hourly.time.forEach((time, index) => {
+          if (!byTime.has(time)) return;
+          Object.assign(byTime.get(time), {
+            tideHeightM: marine.hourly.sea_level_height_msl[index],
+            waveHeightM: marine.hourly.wave_height[index],
+            swellPeriodS: marine.hourly.swell_wave_period[index],
+            waterTempC: marine.hourly.sea_surface_temperature[index],
+            turbidityNTU: null
+          });
+        });
+
+        const points = [...byTime.values()].filter((point) => point.tideHeightM != null && point.waveHeightM != null);
+        const dailyHighTideMap = new Map();
+
+        points.forEach((point) => {
+          const currentHigh = dailyHighTideMap.get(point.dayKey);
+          if (currentHigh == null || point.tideHeightM > currentHigh) {
+            dailyHighTideMap.set(point.dayKey, point.tideHeightM);
+          }
+        });
+
+        return points.map((point) => ({
+          ...point,
+          dailyHighTideM: dailyHighTideMap.get(point.dayKey) ?? null
+        }));
+      }
+
+      async function fetchBeach(beach) {
+        const base = `latitude=${beach.latitude}&longitude=${beach.longitude}&timezone=${encodeURIComponent(TZ)}&forecast_days=${FORECAST_DAYS}`;
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?${base}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m&daily=sunrise,sunset`;
+        const marineUrl = `https://marine-api.open-meteo.com/v1/marine?${base}&hourly=sea_level_height_msl,wave_height,swell_wave_period,sea_surface_temperature`;
+        const [weatherRes, marineRes] = await Promise.all([fetch(weatherUrl), fetch(marineUrl)]);
+        if (!weatherRes.ok || !marineRes.ok) throw new Error('Forecast API error');
+
+        const weather = await weatherRes.json();
+        const marine = await marineRes.json();
+
+        return {
+          beachId: beach.id,
+          points: mergeHourly(weather, marine)
+        };
+      }
+
+      function scoreBeachResult(rawResult) {
+        const beach = getBeach(rawResult.beachId);
+        const points = rawResult.points.map((point) => ({
+          ...point,
+          swimScore: computeSwimScore(point, beach),
+          surfScore: computeSurfScore(point, beach)
+        }));
+
+        return {
+          beach,
+          points,
+          windows: {
+            swim: buildWindows(points, 'swimScore'),
+            surf: buildWindows(points, 'surfScore')
+          }
+        };
+      }
+
+      function renderCards(results) {
+        const now = new Date();
+        el('beach-cards').innerHTML = results.map((result) => {
+          const current = result.points.find((point) => new Date(point.time) >= now) || result.points[0];
+          const summary = criteriaSummary(result.beach);
+          return `
+            <article class="card">
+              <h2>${result.beach.name}</h2>
+              <p class="meta">Now: ${current.airTempC.toFixed(1)}°C air · ${current.waterTempC.toFixed(1)}°C water · ${current.windSpeedKmh.toFixed(0)} km/h wind · ${current.waveHeightM.toFixed(1)} m wave</p>
+              <div class="score-row">
+                <p class="score">Swim <strong>${current.swimScore}</strong> <span class="chip ${chipClass(current.swimScore, 'swim')}">${scoreLabel(current.swimScore, 'swim')}</span></p>
+                <p class="score">Surf <strong>${current.surfScore}</strong> <span class="chip ${chipClass(current.surfScore, 'surf')}">${scoreLabel(current.surfScore, 'surf')}</span></p>
+              </div>
+              <p class="meta">Best swim today: ${result.windows.swim.topToday ? `${fmtHour(result.windows.swim.topToday.time)} (${result.windows.swim.topToday.swimScore}/100)` : 'No eligible daylight window'}</p>
+              <p class="meta">Best surf today: ${result.windows.surf.topToday ? `${fmtHour(result.windows.surf.topToday.time)} (${result.windows.surf.topToday.surfScore}/100)` : 'No eligible dawn-dusk window'}</p>
+              <p class="meta">Good swim rule: ${summary.swim}</p>
+              <p class="meta">Good surf rule: ${summary.surf}</p>
+              <div class="button-row">
+                <button type="button" data-beach="${result.beach.id}">View hourly detail</button>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        [...document.querySelectorAll('button[data-beach]')].forEach((button) => {
+          button.addEventListener('click', () => {
+            state.ui.selectedDetailBeachId = button.dataset.beach;
+            saveSettings();
+            renderDetail();
+          });
+        });
+      }
+
+      function renderDetail() {
+        const result = state.scoredResults.find((item) => item.beach.id === state.ui.selectedDetailBeachId) || state.scoredResults[0];
+        if (!result) return;
+
+        el('detail-title').textContent = `${result.beach.name} — hourly today`;
+        el('detail-notes').textContent = `${result.beach.notes.join(' · ')} · Swim: daylight only · Surf: dawn to dusk.`;
+
+        const today = todayStr();
+        el('hourly-list').innerHTML = result.points
+          .filter((point) => point.time.startsWith(today))
+          .map((point) => `
+            <li>
+              <strong>${fmtHour(point.time)}</strong> · Swim ${point.swimScore}/100 (${scoreLabel(point.swimScore, 'swim')}) · Surf ${point.surfScore}/100 (${scoreLabel(point.surfScore, 'surf')})
+              <span class="small"> · Tide ${point.tideHeightM.toFixed(2)}m · Daily high ${point.dailyHighTideM != null ? `${point.dailyHighTideM.toFixed(2)}m` : 'n/a'} · Wind ${point.windSpeedKmh.toFixed(0)} km/h (${point.windDirectionDeg.toFixed(0)}°) · Swell ${point.waveHeightM.toFixed(1)}m @ ${point.swellPeriodS.toFixed(0)}s · ${point.isDaylight ? 'Daylight' : 'Night'} · ${point.isDawnToDusk ? 'Dawn-Dusk' : 'Outside surf window'}</span>
+            </li>
+          `)
+          .join('');
+      }
+
+      function renderBestTime(results) {
+        const now = new Date();
+        const rankedNow = results
+          .map((result) => {
+            const point = result.points.find((item) => new Date(item.time) >= now) || result.points[0];
+            return {
+              name: result.beach.name,
+              combined: Math.round((point.swimScore + point.surfScore) / 2)
+            };
+          })
+          .sort((a, b) => b.combined - a.combined);
+
+        el('best-now').textContent = `Best overall beach right now: ${rankedNow[0].name} (${rankedNow[0].combined}/100 combined).`;
+        el('best-list').innerHTML = results.map((result) => {
+          const swimWeek = result.windows.swim.daily
+            .map((item) => `${new Date(`${item.date}T00:00:00`).toLocaleDateString('en-AU', { weekday: 'short' })} ${fmtHour(item.best.time)} (${item.best.swimScore})`)
+            .join(' · ');
+          const surfWeek = result.windows.surf.daily
+            .map((item) => `${new Date(`${item.date}T00:00:00`).toLocaleDateString('en-AU', { weekday: 'short' })} ${fmtHour(item.best.time)} (${item.best.surfScore})`)
+            .join(' · ');
+
+          return `
+            <li>
+              <strong>${result.beach.name}</strong><br />
+              Best swim today: ${result.windows.swim.topToday ? `${fmtHour(result.windows.swim.topToday.time)} (${result.windows.swim.topToday.swimScore}/100)` : 'No eligible daylight window'} ·
+              Best surf today: ${result.windows.surf.topToday ? `${fmtHour(result.windows.surf.topToday.time)} (${result.windows.surf.topToday.surfScore}/100)` : 'No eligible dawn-dusk window'}<br />
+              <span class="small">7-day swim windows: ${swimWeek || 'No data'}</span><br />
+              <span class="small">7-day surf windows: ${surfWeek || 'No data'}</span>
+            </li>
+          `;
+        }).join('');
+      }
+
+      function rebuildScoredResults() {
+        if (!state.rawResults.length) {
+          renderCriteriaCopy();
+          return;
+        }
+
+        state.scoredResults = state.rawResults.map(scoreBeachResult);
+        renderCriteriaCopy();
+        renderCards(state.scoredResults);
+        renderDetail();
+        renderBestTime(state.scoredResults);
+      }
+
+      function bindControls() {
+        el('selected-beach').addEventListener('change', (event) => {
+          state.ui.selectedBeachId = event.target.value;
+          saveSettings();
+          populateCriteriaForm();
+        });
+
+        el('criteria-form').addEventListener('submit', (event) => {
+          event.preventDefault();
+          applyCriteriaFromForm();
+        });
+
+        el('reset-criteria').addEventListener('click', () => {
+          resetCriteria();
+        });
+      }
+
+      async function load() {
+        const status = el('status');
+        try {
+          status.textContent = 'Loading local conditions…';
+          state.rawResults = await Promise.all(state.beaches.map(fetchBeach));
+          rebuildScoredResults();
+          status.textContent = `Updated ${new Date().toLocaleTimeString('en-AU')} · Forecast horizon ${FORECAST_DAYS} days · Swim daylight-only · Surf dawn-to-dusk · Criteria adjustable in the settings panel · Auto-refresh every ${REFRESH_MS / 60000} minutes.`;
+        } catch (error) {
+          status.textContent = 'Could not load one or more forecasts. Please retry shortly.';
           console.error(error);
         }
       }
 
-      loadData();
-      setInterval(loadData, REFRESH_MS);
+      loadSettings();
+      populateBeachSelect();
+      populateCriteriaForm();
+      bindControls();
+      load();
+      setInterval(load, REFRESH_MS);
     </script>
   </body>
 </html>
