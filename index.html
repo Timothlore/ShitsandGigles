@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Low Head Tide & Weather</title>
+    <title>ChanSlide</title>
     <style>
       :root {
-        color-scheme: light dark;
-        --bg: #0b132b;
-        --card: #1c2541;
-        --card-alt: #3a506b;
-        --text: #f5f7ff;
-        --muted: #b8c2df;
-        --accent: #5bc0be;
-        --ok: #7fe08a;
+        --bg: #0d1117;
+        --panel: #161b22;
+        --panel-2: #1f2630;
+        --text: #e6edf3;
+        --muted: #9ba7b4;
+        --accent: #4cc2ff;
+        --good: #35d07f;
+        --warn: #ffcd52;
       }
 
       * {
@@ -24,279 +24,442 @@
         margin: 0;
         min-height: 100vh;
         font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: linear-gradient(150deg, var(--bg), #09101f 60%);
         color: var(--text);
+        background: radial-gradient(circle at top right, #132038, var(--bg) 55%);
+      }
+
+      .app {
+        width: min(1100px, 100%);
+        margin: 0 auto;
+        padding: 18px;
         display: grid;
-        place-items: center;
-        padding: 24px;
+        gap: 14px;
       }
 
-      main {
-        width: min(880px, 100%);
-        border-radius: 20px;
-        background: rgb(28 37 65 / 85%);
-        border: 1px solid rgb(255 255 255 / 12%);
-        box-shadow: 0 20px 60px rgb(0 0 0 / 40%);
-        padding: 24px;
-      }
-
-      h1 {
-        margin: 0;
-        font-size: clamp(1.35rem, 4vw, 2rem);
-      }
-
-      .subtitle {
-        margin: 8px 0 20px;
-        color: var(--muted);
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 16px;
-      }
-
-      .card {
-        background: linear-gradient(160deg, rgb(58 80 107 / 65%), rgb(28 37 65 / 90%));
+      .panel {
+        background: linear-gradient(165deg, rgb(31 38 48 / 96%), rgb(22 27 34 / 96%));
         border: 1px solid rgb(255 255 255 / 10%);
-        border-radius: 16px;
-        padding: 16px;
+        border-radius: 14px;
+        box-shadow: 0 14px 40px rgb(0 0 0 / 30%);
       }
 
-      .label {
-        margin: 0;
+      .controls {
+        padding: 12px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 10px;
+        align-items: end;
+      }
+
+      .field label {
+        display: block;
+        font-size: 0.82rem;
         color: var(--muted);
-        font-size: 0.85rem;
+        margin-bottom: 6px;
       }
 
-      .value {
-        margin: 6px 0 0;
-        font-size: clamp(1.25rem, 3vw, 1.9rem);
-        font-weight: 700;
-      }
-
-      .small {
+      .field select,
+      .field input,
+      .btn {
+        width: 100%;
+        border: 1px solid rgb(255 255 255 / 12%);
+        border-radius: 10px;
+        background: #0f141b;
+        color: var(--text);
+        padding: 10px;
         font-size: 0.95rem;
-        margin-top: 10px;
+      }
+
+      .btn {
+        cursor: pointer;
+        background: linear-gradient(180deg, #1e2935, #18212c);
+      }
+
+      .btn.primary {
+        border-color: rgb(76 194 255 / 45%);
+        color: #d8f2ff;
+      }
+
+      .slideshow {
+        padding: 12px;
+      }
+
+      .viewer {
+        position: relative;
+        width: 100%;
+        background: #05070b;
+        border-radius: 12px;
+        overflow: hidden;
+        min-height: 68vh;
+        border: 1px solid rgb(255 255 255 / 12%);
+        touch-action: pan-y;
+        user-select: none;
+      }
+
+      .viewer img,
+      .viewer video {
+        width: 100%;
+        height: 68vh;
+        object-fit: contain;
+        display: none;
+        background: #020304;
+      }
+
+      .viewer .active {
+        display: block;
+      }
+
+      .overlay {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 10px;
+        background: linear-gradient(180deg, rgb(0 0 0 / 0%), rgb(0 0 0 / 72%));
+        font-size: 0.9rem;
+      }
+
+      .meta-title {
+        margin: 0 0 4px;
+        font-weight: 600;
+      }
+
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
         color: var(--muted);
+      }
+
+      .topbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 10px;
+        font-size: 0.9rem;
       }
 
       .status {
-        margin-top: 18px;
-        padding: 10px 12px;
-        border-radius: 10px;
-        background: rgb(91 192 190 / 15%);
         color: var(--accent);
       }
 
-      .error {
-        background: rgb(255 99 99 / 12%);
-        color: #ff8c8c;
+      .hint {
+        color: var(--muted);
       }
 
-      .swim {
-        margin-top: 14px;
-        padding: 12px;
-        border-radius: 10px;
-        background: rgb(127 224 138 / 12%);
-        color: var(--ok);
-        border: 1px solid rgb(127 224 138 / 30%);
+      .pill {
+        background: rgb(53 208 127 / 16%);
+        color: var(--good);
+        border: 1px solid rgb(53 208 127 / 40%);
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.8rem;
       }
 
-      .swim.bad {
-        background: rgb(255 181 99 / 10%);
-        border-color: rgb(255 181 99 / 20%);
-        color: #ffd08d;
+      .warn {
+        color: var(--warn);
+      }
+
+      @media (max-width: 680px) {
+        .viewer,
+        .viewer img,
+        .viewer video {
+          min-height: 56vh;
+          height: 56vh;
+        }
       }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Low Head, Tasmania</h1>
-      <p class="subtitle">Latest weather + tide level from public APIs (updates every 5 minutes)</p>
+    <div class="app">
+      <section class="panel controls" aria-label="Slideshow controls">
+        <div class="field">
+          <label for="board-select">Board</label>
+          <select id="board-select">
+            <option value="wg">/wg/ - Wallpapers</option>
+            <option value="w">/w/ - Anime/Wallpapers</option>
+            <option value="hr">/hr/ - High Resolution</option>
+            <option value="gif">/gif/ - GIF</option>
+            <option value="g">/g/ - Technology</option>
+            <option value="tv">/tv/ - Television & Film</option>
+            <option value="v">/v/ - Video Games</option>
+          </select>
+        </div>
 
-      <section class="grid" id="dashboard" aria-live="polite">
-        <article class="card">
-          <p class="label">Current temperature</p>
-          <p class="value" id="temp">--</p>
-          <p class="small" id="weather-time">Updated --</p>
-        </article>
+        <div class="field">
+          <label for="slide-seconds">Timer (seconds)</label>
+          <input id="slide-seconds" type="number" min="2" max="60" value="8" />
+        </div>
 
-        <article class="card">
-          <p class="label">Wind speed</p>
-          <p class="value" id="wind">--</p>
-          <p class="small" id="conditions">Conditions --</p>
-        </article>
+        <div class="field">
+          <label for="max-items">Max media items</label>
+          <input id="max-items" type="number" min="10" max="200" value="60" />
+        </div>
 
-        <article class="card">
-          <p class="label">Latest tide (sea level)</p>
-          <p class="value" id="tide">--</p>
-          <p class="small" id="tide-time">Updated --</p>
-        </article>
+        <div class="field">
+          <label for="include-webm">Video support</label>
+          <select id="include-webm">
+            <option value="yes">Images + WEBM</option>
+            <option value="no">Images only</option>
+          </select>
+        </div>
 
-        <article class="card">
-          <p class="label">Next high tide</p>
-          <p class="value" id="next-high">--</p>
-          <p class="small" id="next-high-height">Height --</p>
-        </article>
+        <button class="btn primary" id="load-btn" type="button">Load Board</button>
+        <button class="btn" id="toggle-play" type="button">Pause</button>
+        <button class="btn" id="next-btn" type="button">Next ➜</button>
       </section>
 
-      <p class="swim bad" id="swim-status">Swim check pending…</p>
-      <p class="status" id="status">Loading latest data…</p>
-    </main>
+      <section class="panel slideshow">
+        <div class="topbar">
+          <div>
+            <span class="status" id="status">Loading...</span>
+            <span class="pill" id="counter">0 / 0</span>
+          </div>
+          <div class="hint">Swipe left/right (or arrow keys) to navigate.</div>
+        </div>
+
+        <div class="viewer" id="viewer">
+          <img id="slide-image" alt="4chan media slide" />
+          <video id="slide-video" controls playsinline loop muted preload="metadata"></video>
+          <div class="overlay">
+            <p class="meta-title" id="meta-title">Waiting for content…</p>
+            <div class="meta-row">
+              <span id="meta-board">Board: --</span>
+              <span id="meta-type">Type: --</span>
+              <span id="meta-post">Post: --</span>
+              <span id="meta-timer">Timer: --</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p class="hint warn">
+        Note: 4chan endpoints may block direct browser requests in some environments due to CORS/rate limits. This app
+        automatically retries via a read-only public proxy when needed.
+      </p>
+    </div>
 
     <script>
-      const LOW_HEAD = { latitude: -41.0627, longitude: 146.7899 };
-      const REFRESH_MS = 5 * 60 * 1000;
-
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LOW_HEAD.latitude}&longitude=${LOW_HEAD.longitude}&current=temperature_2m,wind_speed_10m,weather_code&daily=sunrise,sunset&timezone=Australia%2FHobart`;
-      const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${LOW_HEAD.latitude}&longitude=${LOW_HEAD.longitude}&hourly=sea_level_height_msl&timezone=Australia%2FHobart&forecast_days=3`;
-
-      const weatherCodeMap = {
-        0: 'Clear sky',
-        1: 'Mainly clear',
-        2: 'Partly cloudy',
-        3: 'Overcast',
-        45: 'Fog',
-        48: 'Depositing rime fog',
-        51: 'Light drizzle',
-        53: 'Moderate drizzle',
-        55: 'Dense drizzle',
-        61: 'Slight rain',
-        63: 'Moderate rain',
-        65: 'Heavy rain',
-        80: 'Rain showers',
-        95: 'Thunderstorm'
+      const state = {
+        board: 'wg',
+        slideSeconds: 8,
+        maxItems: 60,
+        includeWebm: true,
+        items: [],
+        index: 0,
+        timerId: null,
+        playing: true,
+        touchStartX: null
       };
 
-      const el = (id) => document.getElementById(id);
+      const boardSelect = document.getElementById('board-select');
+      const slideSecondsInput = document.getElementById('slide-seconds');
+      const maxItemsInput = document.getElementById('max-items');
+      const includeWebmSelect = document.getElementById('include-webm');
+      const loadBtn = document.getElementById('load-btn');
+      const togglePlayBtn = document.getElementById('toggle-play');
+      const nextBtn = document.getElementById('next-btn');
 
-      function formatDateTime(value) {
-        return new Date(value).toLocaleString('en-AU', {
-          weekday: 'short',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+      const statusEl = document.getElementById('status');
+      const counterEl = document.getElementById('counter');
+      const imageEl = document.getElementById('slide-image');
+      const videoEl = document.getElementById('slide-video');
+      const viewerEl = document.getElementById('viewer');
+      const metaTitleEl = document.getElementById('meta-title');
+      const metaBoardEl = document.getElementById('meta-board');
+      const metaTypeEl = document.getElementById('meta-type');
+      const metaPostEl = document.getElementById('meta-post');
+      const metaTimerEl = document.getElementById('meta-timer');
+
+      function setStatus(text, isError = false) {
+        statusEl.textContent = text;
+        statusEl.style.color = isError ? '#ff8a8a' : 'var(--accent)';
       }
 
-      function findLatestTide(hourly) {
-        const now = new Date();
-        let latestIndex = 0;
-
-        for (let i = 0; i < hourly.time.length; i += 1) {
-          const pointTime = new Date(hourly.time[i]);
-          if (pointTime <= now) {
-            latestIndex = i;
-          } else {
-            break;
-          }
-        }
-
-        return {
-          time: hourly.time[latestIndex],
-          value: hourly.sea_level_height_msl[latestIndex],
-          index: latestIndex
-        };
+      function escapeHtml(unsafe) {
+        return String(unsafe)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;');
       }
 
-      function findNextHighTide(hourly) {
-        const now = new Date();
-
-        for (let i = 1; i < hourly.time.length - 1; i += 1) {
-          const currentTime = new Date(hourly.time[i]);
-          if (currentTime <= now) continue;
-
-          const prev = hourly.sea_level_height_msl[i - 1];
-          const current = hourly.sea_level_height_msl[i];
-          const next = hourly.sea_level_height_msl[i + 1];
-
-          if (current >= prev && current >= next) {
-            return { time: hourly.time[i], value: current, index: i };
-          }
-        }
-
-        return null;
-      }
-
-      function isDaylight(now, sunriseIso, sunsetIso) {
-        const sunrise = new Date(sunriseIso);
-        const sunset = new Date(sunsetIso);
-        return now >= sunrise && now <= sunset;
-      }
-
-      function updateSwimStatus({ current, latestTide, nextHigh, sunrise, sunset }) {
-        const now = new Date();
-        const daylight = isDaylight(now, sunrise, sunset);
-        const warmEnough = current.temperature_2m >= 20;
-        const lowWind = current.wind_speed_10m <= 15;
-        const highTideNow =
-          nextHigh && Math.abs(new Date(nextHigh.time).getTime() - now.getTime()) <= 60 * 60 * 1000;
-
-        const isSwimTime = Boolean(daylight && warmEnough && lowWind && highTideNow);
-
-        const swim = el('swim-status');
-        if (isSwimTime) {
-          swim.textContent = '🏊 Swim time: high tide is around now, wind is low, it is warm, and daylight is available.';
-          swim.classList.remove('bad');
-        } else {
-          swim.textContent = 'Not swim time yet: waiting for daylight + warm temperature (≥20°C) + low wind (≤15 km/h) + high tide near current time.';
-          swim.classList.add('bad');
-        }
-      }
-
-      async function loadData() {
-        const status = el('status');
+      async function fetchCatalog(board) {
+        const directUrl = `https://a.4cdn.org/${board}/catalog.json`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
 
         try {
-          const [weatherRes, marineRes] = await Promise.all([fetch(weatherUrl), fetch(marineUrl)]);
-
-          if (!weatherRes.ok || !marineRes.ok) {
-            throw new Error('API returned an error response');
-          }
-
-          const weather = await weatherRes.json();
-          const marine = await marineRes.json();
-
-          const current = weather.current;
-          const tide = findLatestTide(marine.hourly);
-          const nextHigh = findNextHighTide(marine.hourly);
-
-          el('temp').textContent = `${current.temperature_2m.toFixed(1)}°C`;
-          el('weather-time').textContent = `Updated ${formatDateTime(current.time)}`;
-
-          el('wind').textContent = `${current.wind_speed_10m.toFixed(1)} km/h`;
-          el('conditions').textContent = weatherCodeMap[current.weather_code] ?? 'Unknown';
-
-          el('tide').textContent = `${tide.value.toFixed(2)} m`;
-          el('tide-time').textContent = `Updated ${formatDateTime(tide.time)}`;
-
-          if (nextHigh) {
-            el('next-high').textContent = formatDateTime(nextHigh.time);
-            el('next-high-height').textContent = `Height ${nextHigh.value.toFixed(2)} m`;
-          } else {
-            el('next-high').textContent = 'Not found';
-            el('next-high-height').textContent = 'No local peak in returned data';
-          }
-
-          updateSwimStatus({
-            current,
-            latestTide: tide,
-            nextHigh,
-            sunrise: weather.daily.sunrise[0],
-            sunset: weather.daily.sunset[0]
-          });
-
-          status.textContent = `Live data loaded successfully. Auto-refresh every ${REFRESH_MS / 60000} minutes.`;
-          status.classList.remove('error');
-        } catch (error) {
-          status.textContent = 'Could not load live API data right now. Please refresh shortly.';
-          status.classList.add('error');
-          console.error(error);
+          const res = await fetch(directUrl);
+          if (!res.ok) throw new Error('Direct request failed');
+          return await res.json();
+        } catch {
+          const res = await fetch(proxyUrl);
+          if (!res.ok) throw new Error('Proxy request failed');
+          return await res.json();
         }
       }
 
-      loadData();
-      setInterval(loadData, REFRESH_MS);
+      function collectMedia(catalog) {
+        const items = [];
+
+        for (const page of catalog) {
+          for (const thread of page.threads || []) {
+            if (!thread.tim || !thread.ext) continue;
+
+            const ext = thread.ext.toLowerCase();
+            const isImage = ['.jpg', '.jpeg', '.png', '.gif'].includes(ext);
+            const isVideo = ext === '.webm';
+
+            if (!isImage && !(state.includeWebm && isVideo)) continue;
+
+            items.push({
+              board: state.board,
+              postNo: thread.no,
+              ext,
+              type: isVideo ? 'WEBM' : 'Image',
+              mediaUrl: `https://i.4cdn.org/${state.board}/${thread.tim}${ext}`,
+              threadUrl: `https://boards.4chan.org/${state.board}/thread/${thread.no}`,
+              title: thread.sub || thread.semantic_url || `/${state.board}/ thread ${thread.no}`,
+              comment: thread.com || ''
+            });
+          }
+        }
+
+        return items.slice(0, state.maxItems);
+      }
+
+      function updateCounter() {
+        counterEl.textContent = `${state.items.length ? state.index + 1 : 0} / ${state.items.length}`;
+      }
+
+      function clearMedia() {
+        imageEl.classList.remove('active');
+        videoEl.classList.remove('active');
+        videoEl.pause();
+      }
+
+      function renderSlide() {
+        if (!state.items.length) {
+          clearMedia();
+          metaTitleEl.textContent = 'No media found.';
+          metaBoardEl.textContent = `Board: /${state.board}/`;
+          metaTypeEl.textContent = 'Type: --';
+          metaPostEl.textContent = 'Post: --';
+          updateCounter();
+          return;
+        }
+
+        const item = state.items[state.index];
+        clearMedia();
+
+        if (item.type === 'WEBM') {
+          videoEl.src = item.mediaUrl;
+          videoEl.classList.add('active');
+          videoEl.play().catch(() => {});
+        } else {
+          imageEl.src = item.mediaUrl;
+          imageEl.classList.add('active');
+        }
+
+        metaTitleEl.innerHTML = `${escapeHtml(item.title)} · <a href="${item.threadUrl}" target="_blank" rel="noopener" style="color:#8dd8ff;">Open thread</a>`;
+        metaBoardEl.textContent = `Board: /${item.board}/`;
+        metaTypeEl.textContent = `Type: ${item.type}`;
+        metaPostEl.textContent = `Post: #${item.postNo}`;
+        metaTimerEl.textContent = `Timer: ${state.slideSeconds}s`;
+        updateCounter();
+      }
+
+      function nextSlide(direction = 1) {
+        if (!state.items.length) return;
+        state.index = (state.index + direction + state.items.length) % state.items.length;
+        renderSlide();
+      }
+
+      function stopTimer() {
+        if (state.timerId) {
+          clearInterval(state.timerId);
+          state.timerId = null;
+        }
+      }
+
+      function startTimer() {
+        stopTimer();
+        if (!state.playing) return;
+        state.timerId = setInterval(() => nextSlide(1), state.slideSeconds * 1000);
+      }
+
+      function updatePlayButton() {
+        togglePlayBtn.textContent = state.playing ? 'Pause' : 'Play';
+      }
+
+      async function loadBoard() {
+        state.board = boardSelect.value;
+        state.slideSeconds = Math.max(2, Math.min(60, Number(slideSecondsInput.value) || 8));
+        state.maxItems = Math.max(10, Math.min(200, Number(maxItemsInput.value) || 60));
+        state.includeWebm = includeWebmSelect.value === 'yes';
+        state.index = 0;
+
+        setStatus(`Loading /${state.board}/ catalog…`);
+
+        try {
+          const catalog = await fetchCatalog(state.board);
+          state.items = collectMedia(catalog);
+
+          if (!state.items.length) {
+            setStatus(`Loaded /${state.board}/, but found no matching media.`, true);
+          } else {
+            setStatus(`Loaded ${state.items.length} media items from /${state.board}/.`);
+          }
+
+          renderSlide();
+          startTimer();
+        } catch (err) {
+          state.items = [];
+          renderSlide();
+          stopTimer();
+          setStatus(`Failed to load /${state.board}/. Try again soon. (${err.message})`, true);
+        }
+      }
+
+      loadBtn.addEventListener('click', loadBoard);
+      nextBtn.addEventListener('click', () => nextSlide(1));
+
+      togglePlayBtn.addEventListener('click', () => {
+        state.playing = !state.playing;
+        updatePlayButton();
+        startTimer();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowRight') nextSlide(1);
+        if (event.key === 'ArrowLeft') nextSlide(-1);
+      });
+
+      viewerEl.addEventListener('touchstart', (event) => {
+        state.touchStartX = event.changedTouches[0]?.screenX ?? null;
+      });
+
+      viewerEl.addEventListener('touchend', (event) => {
+        const endX = event.changedTouches[0]?.screenX;
+        if (state.touchStartX === null || endX === undefined) return;
+
+        const delta = endX - state.touchStartX;
+        if (Math.abs(delta) < 40) return;
+        if (delta < 0) nextSlide(1);
+        if (delta > 0) nextSlide(-1);
+      });
+
+      [slideSecondsInput, maxItemsInput, includeWebmSelect, boardSelect].forEach((node) => {
+        node.addEventListener('change', () => {
+          state.slideSeconds = Math.max(2, Math.min(60, Number(slideSecondsInput.value) || 8));
+          metaTimerEl.textContent = `Timer: ${state.slideSeconds}s`;
+          if (state.playing) startTimer();
+        });
+      });
+
+      updatePlayButton();
+      loadBoard();
     </script>
   </body>
 </html>
